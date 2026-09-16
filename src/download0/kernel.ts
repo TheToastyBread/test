@@ -60,6 +60,8 @@ const kpatch_mmap_offsets: Record<string, [number, number]> = {
   '12.50': [0x1fa75a, 0x1fa75d],
   '13.00': [0x1fa77a, 0x1fa77d],
   '13.02': [0x1fa78a, 0x1fa78d],
+  '13.04': [0x1fa78a, 0x1fa78d],  // ⚠️ assume same as 13.02
+  // 13.50 / 13.52 offsets unknown — skip for now
 }
 
 const shellcode_fw_map = {
@@ -111,6 +113,10 @@ const shellcode_fw_map = {
   '12.50': '12.50',
   '12.52': '12.50',
   '13.00': '13.00',
+  '13.02': '13.00',   // use 13.00 shellcode as fallback
+  '13.04': '13.00',
+  '13.50': '13.00',   // ⚠️ likely wrong — may cause crash
+  '13.52': '13.00',   // ⚠️ likely wrong — may cause crash
 }
 
 export function get_mmap_patch_offsets (fw_version: string): [number, number] | null {
@@ -385,6 +391,26 @@ const offset_ps4_12_50 = {        // AND 12.52, 13.00
   KL_LOCK: 0xE6C20,
 }
 
+const offset_ps4_13_02 = {        // AND 13.02, 13.04
+  EVF_OFFSET: 0x0,
+  PRISON0: 0x111FA18,    // ⚠️ unverified — try same as 13.00 first
+  ROOTVNODE: 0x2136E90,  // ⚠️ unverified — try same as 13.00 first
+  TARGET_ID_OFFSET: 0x0,
+  SYSENT_661: 0x110A760, // confirmed matches HENloader MX
+  JMP_RSI_GADGET: 0x47B31, // ⚠️ unverified — try same as 13.00 first
+  KL_LOCK: 0xE6C20,      // ⚠️ unverified — try same as 13.00 first
+}
+
+const offset_ps4_13_50 = {        // AND 13.50, 13.52
+  EVF_OFFSET: 0x0,
+  PRISON0: 0x111FA18,    // ⚠️ unverified
+  ROOTVNODE: 0x2136E90,  // ⚠️ unverified
+  TARGET_ID_OFFSET: 0x0,
+  SYSENT_661: 0x1112470, // from HENloader MX (shifted +0x7D10 vs 13.00)
+  JMP_RSI_GADGET: 0x47B31, // ⚠️ unverified
+  KL_LOCK: 0xE6C20,      // ⚠️ unverified
+}
+
 // Map firmware versions to offset objects
 export const ps4_kernel_offset_list = {
   '5.00': offset_ps4_5_00,
@@ -436,6 +462,10 @@ export const ps4_kernel_offset_list = {
   '12.50': offset_ps4_12_50,
   '12.52': offset_ps4_12_50,
   '13.00': offset_ps4_12_50,
+  '13.02': offset_ps4_13_02,
+  '13.04': offset_ps4_13_02,
+  '13.50': offset_ps4_13_50,
+  '13.52': offset_ps4_13_50,
 }
 
 let kernel_offset: (typeof ps4_kernel_offset_list[keyof typeof ps4_kernel_offset_list]) & {
